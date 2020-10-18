@@ -23,17 +23,17 @@ def perceptron(data):
 		x = row[:-1]
 		y = row[-1]
 
-		if y*np.dot(w, x) <= 0:
-			if run > run_pocket:
-				w_pocket = w
-				run_pocket = run
-			w = w + ETA*y*x
-			run = 0
-		else:
+		if y*np.dot(w, x) <= 0: # if misclassified
+			if run > run_pocket: # if this is the most in a row we've seen
+				w_pocket = w # update weights
+				run_pocket = run # update number of best in a row
+			w = w + ETA*y*x # adjust current weight vector
+			run = 0 # reset run count
+		else: # if correctly classified just increment counter and move to next example
 			run = run + 1
 
 		total_steps = total_steps + 1
-		
+
 	if run > run_pocket:
 		w_pocket = w
 
