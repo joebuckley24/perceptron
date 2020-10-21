@@ -1,5 +1,5 @@
 import numpy as np
-# import pandas as pd
+import pandas as pd
 
 NUMBER_UNCHANGED_POCKET_RUNS = np.inf
 MAXIMUM_TOTAL_STEPS = 10000
@@ -17,11 +17,11 @@ def perceptron(data):
 	run_pocket = 0
 	total_steps = 0
 
-	while termination_criteria(runs, total_steps):
+	while termination_criteria(run, total_steps):
 		
 		row_idx = total_steps % data.shape[0]
 		row = data[row_idx,:]
-		x = row[:-1]
+		x = np.concatenate(([1], row[:-1]))
 		y = row[-1]
 
 		if y*np.dot(w, x) <= 0: # if misclassified
@@ -53,7 +53,6 @@ def yangs_putative_deg2_kernel(u, v):
 	for u_i, v_i in zip(u, v):
 		if u_i > v_i:
 			u_greater = u_greater + u_i - v_i
-			if 
 		else:
 			v_greater = v_greater + v_i - u_i
 		denom = denom + max(abs(u_i), abs(v_i), abs(u_i - v_i))
@@ -62,8 +61,8 @@ def yangs_putative_deg2_kernel(u, v):
 
 def kernelized_perceptron(data, kernel):
 
-	alpha = np.zeros()
-	alpha_pocket = np.zeros()
+	alpha = np.zeros(data.shape[1])
+	alpha_pocket = np.zeros(data.shape[1])
 	run = 0
 	run_pocket = 0
 	total_steps = 0
@@ -79,7 +78,7 @@ def kernelized_perceptron(data, kernel):
 			if run > run_pocket:
 				alpha_pocket = alpha
 				run_pocket = run
-			alpha[i] = alpha[i] + 1
+			alpha[row_idx] = alpha[row_idx] + 1
 			run = 0
 		else:
 			run = run + 1
@@ -90,3 +89,33 @@ def kernelized_perceptron(data, kernel):
 		alpha_pocket = alpha
 
 	return alpha_pocket
+
+def read_data(dataset_name):
+	filepath = {"sonar": "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"}
+	data = pd.read_csv(filepath[dataset_name], header=None)
+	data.iloc[:,-1] = data.iloc[:,-1].replace({"R": -1, "M": 1})
+	return data.to_numpy()
+
+def train_test_split(data):
+	"""last column of data should be -1 or 1, binary class label
+	"""
+	neg_idxs, = np.where(data[:,-1]==-1)
+	pos_idxs, = np.where(data[:,-1]==1)
+	np.random.shuffle(neg_idxs)
+	np.random.shuffle(pos_idxs)
+	neg_idxs_test, neg_idxs_train = np.array_split(neg_idxs, [neg_idxs.shape[0]//5])
+	pos_idxs_test, pos_idxs_train = np.array_split(pos_idxs, [pos_idxs.shape[0]//5])
+	train = data[np.concatenate((neg_idxs_train, pos_idxs_train)),:]
+	test = data[np.concatenate((neg_idxs_test, pos_idxs_test)),:]
+	np.random.shuffle(train)
+	np.random.shuffle(test)
+
+	return train, test
+
+def main():
+	data = read_data("sonar")
+	train, test = train_test_split(data)
+	weights = perceptron(train)
+
+if __name__ == "__main__":
+	main()
