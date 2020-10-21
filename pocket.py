@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 NUMBER_UNCHANGED_POCKET_RUNS = np.inf
-MAXIMUM_TOTAL_STEPS = 10000
+MAXIMUM_TOTAL_STEPS = 100000
 
 ETA = 1
 
@@ -17,7 +17,7 @@ def perceptron(data):
 	run_pocket = 0
 	total_steps = 0
 
-	while termination_criteria(run, total_steps):
+	while not termination_criteria(run, total_steps):
 		
 		row_idx = total_steps % data.shape[0]
 		row = data[row_idx,:]
@@ -67,18 +67,18 @@ def kernelized_perceptron(data, kernel):
 	run_pocket = 0
 	total_steps = 0
 
-	while termination_criteria(runs, total_steps):
+	while not termination_criteria(runs, total_steps):
 
 		row_idx = total_steps % data.shape[0]
 		row = data[row_idx,:]
 		x = row[:-1]
 		y = row[-1]
 
-		if np.dot(np.dot(alpha, y), np.apply_along_axis(lambda x_i: kernel(x_i, x), 1, data[:,:-1])) <= 0:
+		if y*np.dot(alpha, np.apply_along_axis(lambda x_i: kernel(x_i, x), 1, data[:,:-1])) <= 0:
 			if run > run_pocket:
 				alpha_pocket = alpha
 				run_pocket = run
-			alpha[row_idx] = alpha[row_idx] + 1
+			alpha[row_idx] = alpha[row_idx] + ETA
 			run = 0
 		else:
 			run = run + 1
@@ -97,8 +97,6 @@ def read_data(dataset_name):
 	return data.to_numpy()
 
 def train_test_split(data):
-	"""last column of data should be -1 or 1, binary class label
-	"""
 	neg_idxs, = np.where(data[:,-1]==-1)
 	pos_idxs, = np.where(data[:,-1]==1)
 	np.random.shuffle(neg_idxs)
@@ -109,13 +107,25 @@ def train_test_split(data):
 	test = data[np.concatenate((neg_idxs_test, pos_idxs_test)),:]
 	np.random.shuffle(train)
 	np.random.shuffle(test)
-
 	return train, test
+
+def get_accuracy(data, weights):
+	X = data[:,:-1]
+	y = data[:,-1]
+	X = np.concatenate((np.ones((X.shape[0], 1)), X), axis=1)
+	predictions = np.matmul(X, weights)
+	correctly = np.multiply(predictions, y) > 0
+	return sum(correctly) / correctly.shape[0]
 
 def main():
 	data = read_data("sonar")
 	train, test = train_test_split(data)
 	weights = perceptron(train)
+	print(weights)
+	train_accuracy = get_accuracy(train, weights)
+	print(round(train_accuracy, 2))
+	test_accuracy = get_accuracy(test, weights)
+	print(round(test_accuracy, 2))
 
 if __name__ == "__main__":
 	main()
