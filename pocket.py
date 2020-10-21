@@ -61,24 +61,29 @@ def yangs_putative_deg2_kernel(u, v):
 
 def kernelized_perceptron(data, kernel):
 
-	alpha = np.zeros(data.shape[1])
-	alpha_pocket = np.zeros(data.shape[1])
+	alpha = np.zeros(data.shape[0])
+	alpha_pocket = np.zeros(data.shape[0])
+	b = 0
+	b_pocket = 0
+
 	run = 0
 	run_pocket = 0
 	total_steps = 0
 
-	while not termination_criteria(runs, total_steps):
+	while not termination_criteria(run, total_steps):
 
 		row_idx = total_steps % data.shape[0]
 		row = data[row_idx,:]
 		x = row[:-1]
 		y = row[-1]
 
-		if y*np.dot(alpha, np.apply_along_axis(lambda x_i: kernel(x_i, x), 1, data[:,:-1])) <= 0:
+		if y*np.dot(alpha, np.apply_along_axis(lambda x_i: kernel(x_i, x), 1, data[:,:-1])) + b <= 0:
 			if run > run_pocket:
 				alpha_pocket = alpha
 				run_pocket = run
+				b_pocket = b
 			alpha[row_idx] = alpha[row_idx] + ETA
+			b = b + y*ETA
 			run = 0
 		else:
 			run = run + 1
@@ -87,8 +92,9 @@ def kernelized_perceptron(data, kernel):
 
 	if run > run_pocket:
 		alpha_pocket = alpha
+		b_pocket = b
 
-	return alpha_pocket
+	return alpha_pocket, b_pocket
 
 def read_data(dataset_name):
 	filepath = {"sonar": "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"}
@@ -97,6 +103,7 @@ def read_data(dataset_name):
 	return data.to_numpy()
 
 def train_test_split(data):
+
 	neg_idxs, = np.where(data[:,-1]==-1)
 	pos_idxs, = np.where(data[:,-1]==1)
 	np.random.shuffle(neg_idxs)
@@ -107,6 +114,7 @@ def train_test_split(data):
 	test = data[np.concatenate((neg_idxs_test, pos_idxs_test)),:]
 	np.random.shuffle(train)
 	np.random.shuffle(test)
+
 	return train, test
 
 def get_accuracy(data, weights):
@@ -117,15 +125,42 @@ def get_accuracy(data, weights):
 	correctly = np.multiply(predictions, y) > 0
 	return sum(correctly) / correctly.shape[0]
 
+def get_accuracy_kernelized(train_data, test_data, alpha, b, kernel):
+	train_X = train_data[:,:-1]
+	train_y = train_data[:,-1]
+	test_X = test_data[:,:-1]
+	test_y = test_data[:,-1]
+	point_weights = alpha*train_y
+	correct = 0
+	for i, y in enumerate(test_y):
+		if y*np.dot(point_weights, np.apply_along_axis(lambda x_i: kernel(x_i, test_X[i]), 1, train_X)) + b <= 0:
+			correct = correct + 1
+	return correct/test_y.shape[0]
+
+
 def main():
+
 	data = read_data("sonar")
 	train, test = train_test_split(data)
+
+	print("perceptron:")
 	weights = perceptron(train)
 	print(weights)
+
 	train_accuracy = get_accuracy(train, weights)
-	print(round(train_accuracy, 2))
 	test_accuracy = get_accuracy(test, weights)
-	print(round(test_accuracy, 2))
+	print("train accuracy: " + str(round(train_accuracy, 2)))
+	print("test accuracy: " + str(round(test_accuracy, 2)))
+
+	print("\nkernelized_perceptron:")
+	alpha, bias = kernelized_perceptron(train, np.dot)
+
+	train_accuracy_kernelized = get_accuracy_kernelized(train, train, alpha, bias, np.dot)
+	test_accuracy_kernelized = get_accuracy_kernelized(train, test, alpha, bias, np.dot)
+	print("train accuracy: " + str(round(train_accuracy_kernelized, 2)))
+	print("test accuracy: " + str(round(test_accuracy_kernelized, 2)))
+
+
 
 if __name__ == "__main__":
 	main()
