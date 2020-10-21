@@ -96,10 +96,23 @@ def kernelized_perceptron(data, kernel):
 
 	return alpha_pocket, b_pocket
 
-def read_data(dataset_name):
-	filepath = {"sonar": "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"}
-	data = pd.read_csv(filepath[dataset_name], header=None)
-	data.iloc[:,-1] = data.iloc[:,-1].replace({"R": -1, "M": 1})
+def read_data(name):
+	info = {
+		"sonar": {
+			"filepath": "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data", 
+			"labels": {"R": -1, "M": 1}
+		},
+		"cleveland": {
+			"filepath": "http://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data", 
+			"labels": {0: -1, 1: 1, 2: 1, 3: 1, 4: 1}
+		},
+		"skin": {
+			"filepath": "https://archive.ics.uci.edu/ml/machine-learning-databases/00229/Skin_NonSkin.txt",
+			"labels": {1: 1, 2: -1}
+		}
+	}
+	data = pd.read_csv(info[name]["filepath"], header=None, sep="\t|,", engine="python", na_values = "?")
+	data.iloc[:,-1] = data.iloc[:,-1].replace(info[name]["labels"])
 	return data.to_numpy()
 
 def train_test_split(data):
