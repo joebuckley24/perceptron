@@ -106,14 +106,19 @@ def read_data(name):
 			"filepath": "http://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data", 
 			"labels": {0: -1, 1: 1, 2: 1, 3: 1, 4: 1}
 		},
-		"skin": {
-			"filepath": "https://archive.ics.uci.edu/ml/machine-learning-databases/00229/Skin_NonSkin.txt",
-			"labels": {1: 1, 2: -1}
+		"transfusion": {
+			"filepath": "https://archive.ics.uci.edu/ml/machine-learning-databases/blood-transfusion/transfusion.data",
+			"labels": {1: 1, 0: -1}
 		}
-	}
-	data = pd.read_csv(info[name]["filepath"], header=None, sep="\t|,", engine="python", na_values = "?")
-	data.iloc[:,-1] = data.iloc[:,-1].replace(info[name]["labels"])
-	return data.to_numpy()
+	} 
+	#above is data structure (dict of dicts) to hold info for each dataset: 
+	#"sonar" detecting rock or metal cylinder with sonar, 
+	#"cleveland" detecting heart disease, 
+	#"transfusion" detect whether donor from database donated blood March 2007
+	data = pd.read_csv(info[name]["filepath"], header="infer" if name == "transfusion" else None, sep=",", na_values = "?")
+	data.iloc[:,-1] = data.iloc[:,-1].replace(info[name]["labels"]) #converts y column (last column) to be in {-1, 1} 
+	data = data.to_numpy() #pandas DataFrame to numpy ndarray
+	return data[~np.isnan(data).any(axis=1)] #remove rows with missing values
 
 def train_test_split(data):
 
@@ -153,25 +158,33 @@ def get_accuracy_kernelized(train_data, test_data, alpha, b, kernel):
 
 def main():
 
-	data = read_data("sonar")
-	train, test = train_test_split(data)
+	for dataset in ["transfusion"]:#["sonar", "cleveland", "transfusion"]:
 
-	print("perceptron:")
-	weights = perceptron(train)
-	print(weights)
+		print("")
+		print("##################")
+		print("DATASET = " + dataset)
+		print("##################")
+		print("")
+		
+		data = read_data(dataset)
+		train, test = train_test_split(data)
 
-	train_accuracy = get_accuracy(train, weights)
-	test_accuracy = get_accuracy(test, weights)
-	print("train accuracy: " + str(round(train_accuracy, 2)))
-	print("test accuracy: " + str(round(test_accuracy, 2)))
+		print("perceptron:")
+		weights = perceptron(train)
+		print(weights)
 
-	print("\nkernelized_perceptron:")
-	alpha, bias = kernelized_perceptron(train, np.dot)
+		train_accuracy = get_accuracy(train, weights)
+		test_accuracy = get_accuracy(test, weights)
+		print("train accuracy: " + str(round(train_accuracy, 2)))
+		print("test accuracy: " + str(round(test_accuracy, 2)))
 
-	train_accuracy_kernelized = get_accuracy_kernelized(train, train, alpha, bias, np.dot)
-	test_accuracy_kernelized = get_accuracy_kernelized(train, test, alpha, bias, np.dot)
-	print("train accuracy: " + str(round(train_accuracy_kernelized, 2)))
-	print("test accuracy: " + str(round(test_accuracy_kernelized, 2)))
+		print("\nkernelized_perceptron:")
+		alpha, bias = kernelized_perceptron(train, np.dot)
+
+		train_accuracy_kernelized = get_accuracy_kernelized(train, train, alpha, bias, np.dot)
+		test_accuracy_kernelized = get_accuracy_kernelized(train, test, alpha, bias, np.dot)
+		print("train accuracy: " + str(round(train_accuracy_kernelized, 2)))
+		print("test accuracy: " + str(round(test_accuracy_kernelized, 2)))
 
 
 
